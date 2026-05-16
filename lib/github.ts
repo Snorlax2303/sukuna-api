@@ -94,35 +94,29 @@ export async function readNoteFromGitHub(category: string, filename: string): Pr
   return Buffer.from(result.content, 'base64').toString('utf-8');
 }
 
-// Busca notas pelo conteúdo usando GitHub Search API
+// Busca notas lendo o conteúdo real de cada arquivo
 export async function searchNotesOnGitHub(query: string, category?: string): Promise<GitHubNote[]> {
-  let searchQuery = `${query} repo:${GITHUB_OWNER}/${GITHUB_REPO} extension:md`;
-  if (category) searchQuery += ` path:${category}`;
+  const allNotes = await listNotesFromGitHub(category);
+  const queryLower = query.toLowerCase();
+  const results: GitHubNote[] = [];
 
-  const response = await fetch(
-    `https://api.github.com/search/code?q=${encodeURIComponent(searchQuery)}&per_page=20`,
-    {
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-      },
+  for (const note of allNotes) {
+    const content = await readNoteFromGitHub(note.category, note.filename);
+    if (!content) continue;
+
+    const contentLower = content.toLowerCase();
+    const titleLower = note.title.toLowerCase();
+
+    if (titleLower.includes(queryLower) || contentLower.includes(queryLower)) {
+      // Gerar excerpt com contexto ao redor do termo
+      const idx = contentLower.indexOf(queryLower);
+      const start = Math.max(0, idx - 60);
+      const end = Math.min(content.length, idx + 100);
+      const excerpt = content.slice(start, end).replace(/\n/g, ' ').trim();
+
+      results.push({ ...note, excerpt: `...${excerpt}...` });
     }
-  );
+  }
 
-  const data = await response.json();
-  if (!data.items) return [];
-
-  return data.items.map((item: { name: string; path: string }) => {
-    const parts = item.path.split('/');
-    const cat = parts.length > 1 ? parts[0] : 'Misc';
-    const title = item.name.replace('.md', '');
-    return {
-      title,
-      filename: item.name,
-      category: cat,
-      path: `/${item.path}`,
-      tags: [cat.toLowerCase()],
-      excerpt: `Nota encontrada em ${cat}`,
-    };
-  });
+  return results;
 }
