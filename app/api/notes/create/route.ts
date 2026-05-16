@@ -3,73 +3,45 @@ import {
   detectCategory,
   extractTags,
   sanitizeFilename,
+  generateNoteContent,
   validateNoteInput,
-  formatOneDrivePath
 } from '@/lib/utils';
+import { createFileOnGitHub } from '@/lib/github';
 import type { CreateNoteRequest, CreateNoteResponse } from '@/lib/types';
 
-/**
- * POST /api/notes/create
- *
- * Cria uma nota no Obsidian Sukuna
- *
- * Body:
- * {
- *   "title": "React - Memoization",
- *   "content": "Guia completo sobre useMemo e useCallback...",
- *   "category": "Desenvolvimento" (opcional - será detectado automaticamente)
- * }
- *
- * Response:
- * {
- *   "success": true,
- *   "message": "Nota criada com sucesso!",
- *   "data": {
- *     "filename": "React - Memoization.md",
- *     "category": "Desenvolvimento",
- *     "tags": ["desenvolvimento", "react"],
- *     "created_at": "2024-05-16T10:30:00Z",
- *     "path": "/Desenvolvimento/React - Memoization.md"
- *   }
- * }
- */
 export async function POST(request: NextRequest): Promise<NextResponse<CreateNoteResponse>> {
   try {
-    // Parse do request body
     const body = await request.json().catch(() => ({}));
     const { title, content, category } = body as Partial<CreateNoteRequest>;
 
-    // Validar inputs
     const validation = validateNoteInput(title, content);
     if (!validation.valid) {
       return NextResponse.json(
-        {
-          success: false,
-          message: 'Dados inválidos',
-          error: validation.errors.join('; ')
-        } as CreateNoteResponse,
+        { success: false, message: 'Dados inválidos', error: validation.errors.join('; ') } as CreateNoteResponse,
         { status: 400 }
       );
     }
 
-    // Detectar categoria
     const detectedCategory = detectCategory(title!, content!, category);
-
-    // Extrair tags
     const tags = extractTags(content!, detectedCategory);
-
-    // Sanitizar nome do arquivo
     const filename = sanitizeFilename(title!) + '.md';
+    const noteContent = generateNoteContent(title!, content!, detectedCategory, tags);
 
-    // Formatar path para OneDrive
-    const path = formatOneDrivePath(detectedCategory, title!);
+    // Caminho no repositório: Categoria/Titulo.md
+    const githubPath = `${detectedCategory}/${filename}`;
 
-    // TODO: Gerar conteúdo da nota quando implementar OneDrive
-    // const noteContent = generateNoteContent(title!, content!, detectedCategory, tags);
+    const github = await createFileOnGitHub(
+      githubPath,
+      noteContent,
+      `feat: add note "${title}"`
+    );
 
-    // TODO: Aqui você implementaria a lógica de escrever no OneDrive
-    // Para agora, apenas retornamos o que seria criado
-    // const oneDriveResult = await createNoteOnOneDrive(path, noteContent);
+    if (!github.success) {
+      return NextResponse.json(
+        { success: false, message: 'Erro ao salvar no GitHub', error: 'GitHub API error' } as CreateNoteResponse,
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
       {
@@ -80,15 +52,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateNot
           category: detectedCategory,
           tags,
           created_at: new Date().toISOString(),
-          path
+          path: `/${githubPath}`,
         }
       } as CreateNoteResponse,
       { status: 201 }
     );
 
   } catch (error) {
-    console.error('Erro ao criar nota:', error);
-
     return NextResponse.json(
       {
         success: false,
@@ -100,18 +70,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateNot
   }
 }
 
-/**
- * OPTIONS /api/notes/create
- *
- * CORS preflight
- */
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    }
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
   });
 }
