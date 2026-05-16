@@ -19,12 +19,13 @@ export async function createFileOnGitHub(filePath: string, content: string, comm
   const encoded = Buffer.from(content, 'utf-8').toString('base64');
 
   // Verifica se arquivo já existe (para evitar duplicidade)
-  const existing = await githubRequest(filePath);
+  const existing = await githubRequest(filePath + '?ref=main');
   const sha = existing.sha as string | undefined;
 
   const body: Record<string, string> = {
     message: commitMessage,
     content: encoded,
+    branch: 'main',
   };
 
   if (sha) body.sha = sha;
