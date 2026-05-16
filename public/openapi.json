@@ -1,0 +1,223 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Sukuna Note API",
+    "description": "API para criar, listar e buscar notas no Obsidian via GitHub",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://sukuna-api-sigma.vercel.app"
+    }
+  ],
+  "paths": {
+    "/api/notes/create": {
+      "post": {
+        "operationId": "createNote",
+        "summary": "Criar uma nota no Obsidian",
+        "description": "Cria uma nova nota markdown no vault do Obsidian. A categoria é detectada automaticamente pelo conteúdo se não for informada.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "content"],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "Título da nota"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "Conteúdo da nota em markdown"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "Categoria opcional. Se não informada, é detectada automaticamente.",
+                    "enum": ["Desenvolvimento", "Design", "Pessoal", "Trabalho", "Aprendizado", "Ideias", "Misc"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Nota criada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "filename": { "type": "string" },
+                        "category": { "type": "string" },
+                        "tags": { "type": "array", "items": { "type": "string" } },
+                        "created_at": { "type": "string" },
+                        "path": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notes": {
+      "get": {
+        "operationId": "listNotes",
+        "summary": "Listar notas do Obsidian",
+        "description": "Retorna todas as notas do vault, com filtro opcional por categoria.",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Filtrar por categoria",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Quantidade máxima de resultados",
+            "schema": { "type": "integer", "default": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de notas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "notes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "title": { "type": "string" },
+                              "filename": { "type": "string" },
+                              "category": { "type": "string" },
+                              "path": { "type": "string" },
+                              "tags": { "type": "array", "items": { "type": "string" } }
+                            }
+                          }
+                        },
+                        "total": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "operationId": "searchNotes",
+        "summary": "Buscar notas por conteúdo",
+        "description": "Busca notas pelo título e conteúdo. Retorna trechos do contexto onde o termo foi encontrado.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "Termo de busca (mínimo 2 caracteres)",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Filtrar por categoria",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultados da busca",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "query": { "type": "string" },
+                        "results": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "title": { "type": "string" },
+                              "category": { "type": "string" },
+                              "excerpt": { "type": "string" },
+                              "path": { "type": "string" }
+                            }
+                          }
+                        },
+                        "total": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "operationId": "listCategories",
+        "summary": "Listar categorias disponíveis",
+        "description": "Retorna todas as categorias do vault com suas cores.",
+        "responses": {
+          "200": {
+            "description": "Lista de categorias",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "categories": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string" },
+                              "count": { "type": "integer" },
+                              "color": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
