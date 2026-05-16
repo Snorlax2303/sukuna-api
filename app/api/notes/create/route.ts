@@ -3,7 +3,6 @@ import {
   detectCategory,
   extractTags,
   sanitizeFilename,
-  generateNoteContent,
   validateNoteInput,
   formatOneDrivePath
 } from '@/lib/utils';
@@ -62,16 +61,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateNot
     // Sanitizar nome do arquivo
     const filename = sanitizeFilename(title!) + '.md';
 
-    // Gerar conteúdo da nota
-    const noteContent = generateNoteContent(
-      title!,
-      content!,
-      detectedCategory,
-      tags
-    );
-
     // Formatar path para OneDrive
     const path = formatOneDrivePath(detectedCategory, title!);
+
+    // TODO: Gerar conteúdo da nota quando implementar OneDrive
+    // const noteContent = generateNoteContent(title!, content!, detectedCategory, tags);
 
     // TODO: Aqui você implementaria a lógica de escrever no OneDrive
     // Para agora, apenas retornamos o que seria criado
