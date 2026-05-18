@@ -2,11 +2,20 @@ import { CATEGORY_KEYWORDS } from './constants';
 
 export type Category = keyof typeof CATEGORY_KEYWORDS;
 
+export interface FileMetadata {
+  name: string;
+  size: number;
+  type: string;
+  base64: string;
+  mimeType: string;
+}
+
 export interface CreateNoteRequest {
   title: string;
   content: string;
   category?: string;
   filename?: string;
+  files?: FileMetadata[];
 }
 
 export interface CreateNoteResponse {
@@ -18,6 +27,12 @@ export interface CreateNoteResponse {
     tags: string[];
     created_at: string;
     path: string;
+    attachments?: {
+      filename: string;
+      type: string;
+      size: number;
+      path: string;
+    }[];
   };
   error?: string;
 }

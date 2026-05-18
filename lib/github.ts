@@ -15,8 +15,14 @@ async function githubRequest(path: string, options: RequestInit = {}) {
   return response.json();
 }
 
-export async function createFileOnGitHub(filePath: string, content: string, commitMessage: string) {
-  const encoded = Buffer.from(content, 'utf-8').toString('base64');
+export async function createFileOnGitHub(
+  filePath: string,
+  content: string,
+  commitMessage: string,
+  isBinary: boolean = false
+) {
+  // Se for binário, content já vem em base64; se for texto, converte
+  const encoded = isBinary ? content : Buffer.from(content, 'utf-8').toString('base64');
 
   const existing = await githubRequest(filePath + '?ref=main');
   const sha = existing.sha as string | undefined;
