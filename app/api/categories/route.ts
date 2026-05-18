@@ -1,19 +1,27 @@
 import { NextResponse } from 'next/server';
 import { CATEGORIES } from '@/lib/constants';
+import { listNotesFromGitHub } from '@/lib/github';
 import type { ApiResponse } from '@/lib/types';
 
 /**
  * GET /api/categories
  *
  * Lista todas as categorias disponíveis
- * (com contagem de notas em cada uma)
+ * (com contagem real de notas em cada uma)
  */
 export async function GET(): Promise<NextResponse> {
   try {
-    // TODO: Implementar contagem real do OneDrive
+    const allNotes = await listNotesFromGitHub();
+
+    // Contar notas por categoria
+    const countMap: Record<string, number> = {};
+    for (const note of allNotes) {
+      countMap[note.category] = (countMap[note.category] || 0) + 1;
+    }
+
     const categoriesWithCount = CATEGORIES.map(category => ({
       name: category,
-      count: 0, // Será preenchido com dados reais do OneDrive
+      count: countMap[category] || 0,
       color: getCategoryColor(category)
     }));
 
